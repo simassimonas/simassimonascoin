@@ -17,6 +17,8 @@ using std::ifstream;
 using std::ofstream;
 using std::string;
 using std::stringstream;
+using std::vector;
+using std::to_string;
 
 #define S11 7
 #define S12 12
