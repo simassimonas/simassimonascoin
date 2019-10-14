@@ -31,6 +31,23 @@ public:
     inline double getSuma() const {return suma;}
 };
 
+class block{
+private:
+    time_t timestamp;
+    float versija = 1.0;
+    string blockHash;
+    string prevBlockHash;
+    int difficulty;
+public:
+    int nonce;
+    block(int nonce_=0,int difficulty_=1, string prevBlockHash_="", string blockHash_="" ):nonce(nonce_), difficulty(difficulty_), prevBlockHash(prevBlockHash_), blockHash(blockHash_){
+        timestamp=std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    };
+    inline string getBlockHash() const { return blockHash;};
+    inline string getPrevBlockHash() const { return prevBlockHash;};
+    inline int getDifficulty() const { return difficulty;};
+};
+
 void vartotojuKurimas(vector<vartotojas>& vartotojai, int vartotojuKiekis){
     for(int i=0; i<vartotojuKiekis; i++){
         vartotojas temp("vardas"+to_string(i+1), hashFunction(to_string(i)), 100+(std::rand()%(1000000-100+1)));
@@ -63,18 +80,56 @@ void transakcijuNuskaitymas(vector<transakcija>& transakcijos){
     }
 }
 
+
+void mineBlocks(vector<transakcija>& transakcijos, vector<vartotojas>& vartotojai ){
+    //sukuria blockchaina ir inicializuoja genesis blocka
+    vector<block> blockChain;
+    block genesisBlock(0, 1);
+    blockChain.push_back(genesisBlock);
+
+    bool ar=1;
+    while(ar){
+        if(transakcijos.size()/100>1){
+            int tempNonce=0;
+            string temphash;
+            string dString(blockChain.back().getDifficulty(), '0'); //stringas, skirtas tikrinimui ar hashas atitinka sudetinguma
+            do{
+                tempNonce++;
+                temphash = hashFunction(to_string(tempNonce)+blockChain.back().getPrevBlockHash());
+            } while (temphash.substr(0, blockChain.back().getDifficulty()) != dString);
+            //tikrina, ar reikia padidinti sunkuma
+            if(blockChain.size()%25==0){
+                block newBlock(tempNonce, blockChain.back().getDifficulty()+1, blockChain.back().getBlockHash(), temphash);
+                blockChain.push_back(newBlock);
+            }
+            else{
+                block newBlock(tempNonce, blockChain.back().getDifficulty(), blockChain.back().getBlockHash(), temphash);
+                blockChain.push_back(newBlock);
+            }
+            transakcijos.erase(transakcijos.begin(), transakcijos.begin() + 100);
+        }
+        else ar=0;
+    }
+
+    for(int i=0; i<blockChain.size(); i++){
+        cout << blockChain[i].getBlockHash() << endl;
+    }
+    cout << blockChain.size();
+}
+
 int main()
 {
     vector<vartotojas> vartotojai;
     int vartotojuKiekis = 100;
     vartotojuKurimas(vartotojai, vartotojuKiekis);
 
-    int transakcijuKiekis = 10000;
+    int transakcijuKiekis = 10045;
     transakcijuKurimas(vartotojai, transakcijuKiekis);
+
     vector<transakcija> transakcijos;
     transakcijuNuskaitymas(transakcijos);
-    cout << transakcijos[1].getNr() << transakcijos[9999].getKeyFrom() << endl;
 
+    mineBlocks(transakcijos, vartotojai);
 
     return 0;
 }
