@@ -41,11 +41,12 @@ private:
 public:
     int nonce;
     block(int nonce_=0,int difficulty_=1, string prevBlockHash_="", string blockHash_="" ):nonce(nonce_), difficulty(difficulty_), prevBlockHash(prevBlockHash_), blockHash(blockHash_){
-        timestamp=std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        timestamp=time(0);
     };
     inline string getBlockHash() const { return blockHash;};
     inline string getPrevBlockHash() const { return prevBlockHash;};
     inline int getDifficulty() const { return difficulty;};
+    char* getTimeStamp() const {  char* dt = ctime(&timestamp); return dt; };
 };
 
 void vartotojuKurimas(vector<vartotojas>& vartotojai, int vartotojuKiekis){
@@ -112,7 +113,7 @@ void mineBlocks(vector<transakcija>& transakcijos, vector<vartotojas>& vartotoja
     }
 
     for(int i=0; i<blockChain.size(); i++){
-        cout << blockChain[i].getBlockHash() << endl;
+        cout << blockChain[i].getBlockHash() << " " << blockChain[i].getTimeStamp() << endl;
     }
     cout << blockChain.size();
 }
@@ -120,7 +121,7 @@ void mineBlocks(vector<transakcija>& transakcijos, vector<vartotojas>& vartotoja
 int main()
 {
     vector<vartotojas> vartotojai;
-    int vartotojuKiekis = 100;
+    int vartotojuKiekis = 10000;
     vartotojuKurimas(vartotojai, vartotojuKiekis);
 
     int transakcijuKiekis = 10045;

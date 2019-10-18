@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <ctime>
 #include <climits>
 #include <fstream>
 #include <streambuf>
