@@ -11,6 +11,7 @@
 #include <streambuf>
 #include <chrono>
 #include <algorithm>
+#include<iterator>
 using std::cin;
 using std::cout;
 using std::endl;
