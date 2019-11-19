@@ -41,18 +41,62 @@ private:
     string prevBlockHash;
     int difficulty;
     vector<transakcija> blokoTransakcijos;
+    string MerkelRootHash;
 public:
     int nonce;
-    block(int nonce_=0,int difficulty_=1, string prevBlockHash_="", string blockHash_="", int blockChainSize=1 ):nonce(nonce_), difficulty(difficulty_), prevBlockHash(prevBlockHash_), blockHash(blockHash_){
+    block(vector<transakcija> transakcijos, int nonce_=0,int difficulty_=1, string prevBlockHash_="", string blockHash_="", int blockChainSize=1 ):nonce(nonce_), difficulty(difficulty_), prevBlockHash(prevBlockHash_), blockHash(blockHash_){
         timestamp=time(0);
         if(blockChainSize%25==0) difficulty++; //padidina blocko difficulty
+        assignTransactions(transakcijos);
+        MerkelRootHash = merkelRootHashFunction();
+        //cout << "constructor merkel root hash: " << MerkelRootHash << endl;
     };
     inline string getBlockHash() const { return blockHash;};
     inline string getPrevBlockHash() const { return prevBlockHash;};
     inline int getDifficulty() const { return difficulty;};
     char* getTimeStamp() const {  char* dt = ctime(&timestamp); return dt; };
-    void assignTransactions(vector<transakcija>& transakcijos) { blokoTransakcijos.assign(transakcijos.begin(), transakcijos.begin()+100); }
+    void assignTransactions(vector<transakcija>& transakcijos) {if(transakcijos.size()>=100) blokoTransakcijos.assign(transakcijos.begin(), transakcijos.begin()+100);}
+    string merkelRootHashFunction();
+    inline string getMerkelRootHash() const { return MerkelRootHash;};
 };
+
+string block::merkelRootHashFunction(){
+    //Stop if hash list is empty or contains one element
+    if (blokoTransakcijos.empty()){
+        return "0";
+    }
+    else if (blokoTransakcijos.size() == 1){ return blokoTransakcijos[0].getID();}
+
+    //transfering all transactions' ids into a new merkle vector
+    vector<string> merkle;
+    for(int i=0; i<blokoTransakcijos.size(); i++){
+        merkle.push_back(blokoTransakcijos[i].getID());
+    }
+
+    // While there is more than 1 hash in the list, keep looping...
+    while(merkle.size() > 1){
+        // If number of hashes is odd, duplicate last hash in the list.
+        if (merkle.size() % 2 != 0)
+            merkle.push_back(merkle.back());
+        // List size is now even.
+        assert(merkle.size() % 2 == 0);
+
+        // New hash list.
+        vector<string> new_merkle;
+        // Loop through hashes 2 at a time.
+        for (auto it = merkle.begin(); it != merkle.end(); it += 2)
+        {
+            string concat_data = *it + *(it + 1);
+            // Hash both of the hashes and add the new hash to the new list
+            new_merkle.push_back(hashFunction(concat_data));
+        }
+        // This is the new list.
+        merkle = new_merkle;
+    }
+    // Finally we end up with a single item.
+    return merkle[0];
+}
+
 
 void vartotojuKurimas(vector<vartotojas>& vartotojai, int vartotojuKiekis){
     for(int i=0; i<vartotojuKiekis; i++){
@@ -95,7 +139,7 @@ void transakcijuNuskaitymas(vector<transakcija>& transakcijos, vector<vartotojas
         iss >> temp3;
         iss >> temp4;
         transakcija tempTransakcija(i, temp1, temp2, temp3);
-        //patikrina ar transakcijos informacijos hashas sutampa su transakcijos ID ir ar uztenka balanso
+        //patikrina, ar transakcijos informacijos hashas sutampa su transakcijos ID ir ar uztenka balanso
         if(tempTransakcija.getID()==temp4&&arUztenkaBalanso(temp1, temp3, vartotojai)) transakcijos.push_back(tempTransakcija);
     }
 }
@@ -104,7 +148,9 @@ void transakcijuNuskaitymas(vector<transakcija>& transakcijos, vector<vartotojas
 void mineBlocks(vector<transakcija>& transakcijos, vector<vartotojas>& vartotojai ){
     //sukuria blockchaina ir inicializuoja genesis blocka
     vector<block> blockChain;
-    block genesisBlock(0, 1);
+    //dummy vector for the first genesisblock
+    vector<transakcija> nonExistent;
+    block genesisBlock(nonExistent, 0, 1);
     blockChain.push_back(genesisBlock);
 
     while(transakcijos.size()>=500){
@@ -120,8 +166,8 @@ void mineBlocks(vector<transakcija>& transakcijos, vector<vartotojas>& vartotoja
                 Temphash = hashFunction(to_string(nonce)+blockChain.back().getBlockHash());
                 if(Temphash.substr(0, blockChain.back().getDifficulty()) == difString){
                     Blocks--;
-                    block newBlock(nonce, blockChain.back().getDifficulty(), blockChain.back().getBlockHash(), Temphash, blockChain.size());
-                    newBlock.assignTransactions(transakcijos);
+                    block newBlock(transakcijos, nonce, blockChain.back().getDifficulty(), blockChain.back().getBlockHash(), Temphash, blockChain.size());
+                    //newBlock.assignTransactions(transakcijos);
                     blockChain.push_back(newBlock);
                     transakcijos.erase(transakcijos.begin(), transakcijos.begin() + 100);
                     break;
@@ -144,8 +190,8 @@ void mineBlocks(vector<transakcija>& transakcijos, vector<vartotojas>& vartotoja
                 temphash = hashFunction(to_string(tempNonce)+blockChain.back().getBlockHash());
             } while (temphash.substr(0, blockChain.back().getDifficulty()) != dString);
 
-            block newBlock(tempNonce, blockChain.back().getDifficulty(), blockChain.back().getBlockHash(), temphash, blockChain.size());
-            newBlock.assignTransactions(transakcijos);
+            block newBlock(transakcijos, tempNonce, blockChain.back().getDifficulty(), blockChain.back().getBlockHash(), temphash, blockChain.size());
+            //newBlock.assignTransactions(transakcijos);
             blockChain.push_back(newBlock);
             transakcijos.erase(transakcijos.begin(), transakcijos.begin() + 100);
         }
@@ -164,7 +210,7 @@ int main()
     int vartotojuKiekis = 10000;
     vartotojuKurimas(vartotojai, vartotojuKiekis);
 
-    int transakcijuKiekis = 200;
+    int transakcijuKiekis = 5000;
     transakcijuKurimas(vartotojai, transakcijuKiekis);
 
     vector<transakcija> transakcijos;
